@@ -18,7 +18,7 @@ export function useScrollSpy<T extends MenuType>({
     new Map<string, HTMLElement>(),
   );
   const isByClickRef = useRef(false);
-  const clickTimeoutRef = useRef<any>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function handleTabClick(currentTab: ExtendTitleType) {
     isByClickRef.current = true;
     setCurrentSection(currentTab);

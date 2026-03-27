@@ -6,7 +6,7 @@ export const Tab = ({
 }: {
   title: string;
   isActive?: boolean;
-  ref: any;
+  ref: (node: HTMLElement | null) => void;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   let className = "h-full flex items-center justify-center w-full";
   if (isActive) {

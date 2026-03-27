@@ -1,0 +1,51 @@
+{
+  "restaurant": {
+    "name": "李家米粉湯",
+    "address": "新北市永和區保平路45號"
+  },
+  "menu": {
+    "main_dishes": [
+      { "name": "鍋燒麵", "price": 120 },
+      { "name": "鮮魚麵", "price": 115 },
+      { "name": "魯肉飯", "price": 40 }
+    ],
+    "soups_and_rice_noodles": [
+      { "name": "鮮魚湯", "price": 90 },
+      { "name": "嘴邊湯", "price": 80 },
+      { "name": "肝連湯", "price": 80 },
+      { "name": "芋頭米粉湯", "price": 65 },
+      { "name": "貢丸米粉湯", "price": 65 },
+      { "name": "魚丸米粉湯", "price": 65 },
+      { "name": "大腸湯", "price": 65 },
+      { "name": "粉腸湯", "price": 65 },
+      { "name": "蛤仔湯", "price": 65 },
+      { "name": "米粉湯", "price": 40 },
+      { "name": "蘿蔔湯", "price": 40 },
+      { "name": "貢丸湯", "price": 40 },
+      { "name": "蛋花湯", "price": 40 },
+      { "name": "魚丸湯", "price": 40 }
+    ],
+    "side_dishes": [
+      { "name": "嘴邊肉", "price": 80 },
+      { "name": "肝連肉", "price": 80 },
+      { "name": "三層肉", "price": 80 },
+      { "name": "鯊魚煙", "price": 80 },
+      { "name": "大腸", "price": 70 },
+      { "name": "粉腸", "price": 70 },
+      { "name": "燙青菜", "price": 55 },
+      { "name": "皮蛋豆腐", "price": 55 },
+      { "name": "煙燻豬頭皮", "price": 45 },
+      { "name": "米血糕", "price": 45 },
+      { "name": "蘿蔔", "price": 40 },
+      { "name": "豬皮", "price": 40 },
+      { "name": "泡菜", "price": 40 },
+      { "name": "豆皮", "price": 25 },
+      { "name": "素雞", "price": 25 },
+      { "name": "百頁", "price": 25 },
+      { "name": "油豆腐", "price": 20 },
+      { "name": "海帶", "price": 20 },
+      { "name": "豆干", "price": 20 },
+      { "name": "魯蛋", "price": 20 }
+    ]
+  }
+}
