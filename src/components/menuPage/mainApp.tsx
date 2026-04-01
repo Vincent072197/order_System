@@ -21,7 +21,8 @@ function App() {
     setSelectedItem(item);
   }
   return (
-    <CartProvider>
+    <>
+      {/* <CartProvider> */}
       <div className="pt-32 min-h-screen">
         <Header />
         <NavBar currentSection={currentSection}>
@@ -66,7 +67,7 @@ function App() {
           handleSelectedItem={handleSelectedItem}
         />
       )}
-    </CartProvider>
+    </>
   );
 }
 

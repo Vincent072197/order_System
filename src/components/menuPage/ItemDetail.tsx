@@ -1,4 +1,3 @@
-"use client";
 import { useEffect, useRef, useState, type RefCallback } from "react";
 import { Item, ItemDetailsProps } from "@/src/components/menuPage/DishItem";
 import { OptionCard } from "@/src/components/menuPage/OptionCard";
@@ -94,7 +93,7 @@ export default function ItemDetail({
               /** format of cart data
                *  {title:title,quantity:quantity,customize:Selected}
                */
-              setItem({ title, quantity, customize: selected });
+              setItem({ title, price, quantity, customize: selected });
               handleClose();
             }}
           >

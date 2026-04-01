@@ -1,4 +1,5 @@
 "use client";
+import { Selected } from "@/src/components/menuPage/ItemDetail";
 import {
   createContext,
   ReactNode,
@@ -7,29 +8,59 @@ import {
   useState,
 } from "react";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type CartItem = Record<string, any>;
+type CartItem = {
+  title: string;
+  price: number;
+  quantity: number;
+  customize: Selected;
+  uuid?: string;
+};
 
 type CartContextType = {
   cart: CartItem[];
   setItem: (idObject: CartItem) => void;
+  removeItem: (uuid: string) => void;
+  updateQuantity: (uuid: string, delta: number) => void;
+  reset: () => void;
 } | null;
 
 const CartContext = createContext<CartContextType>(null);
 
 export default function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  useEffect(() => {
-    console.log(cart);
-  }, [cart]);
+  /** no useEffect need, pass a function to useState instead */
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem("LeeStore");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const setItem = (idObject: CartItem) => {
     const newItem = { ...idObject, uuid: generateUuid() };
     setCart((prev) => [...prev, newItem]);
   };
-
+  const removeItem = (uuid: string) => {
+    setCart((prev) => prev.filter((item) => item.uuid !== uuid));
+  };
+  const updateQuantity = (uuid: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.uuid === uuid
+            ? { ...item, quantity: item.quantity + delta }
+            : item,
+        )
+        .filter((item) => item.quantity > 0),
+    );
+  };
+  const reset = () => {
+    setCart([]);
+  };
   const value = {
     cart,
     setItem,
+    removeItem,
+    updateQuantity,
+    reset,
   };
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
