@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-type CartItem = {
+export type CartItem = {
   title: string;
   price: number;
   quantity: number;
@@ -29,10 +29,14 @@ const CartContext = createContext<CartContextType>(null);
 export default function CartProvider({ children }: { children: ReactNode }) {
   /** no useEffect need, pass a function to useState instead */
   const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return [];
     const saved = window.localStorage.getItem("LeeStore");
     return saved ? JSON.parse(saved) : [];
   });
+
+  useEffect(() => {
+    window.localStorage.setItem("LeeStore", JSON.stringify(cart));
+  }, [cart]);
 
   const setItem = (idObject: CartItem) => {
     const newItem = { ...idObject, uuid: generateUuid() };

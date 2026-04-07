@@ -85,7 +85,25 @@ export function CartPage() {
           繼續
         </button>
         <button
-          onClick={() => {
+          onClick={async () => {
+            const fakebackendData = [];
+            const previousOrderString =
+              window.localStorage.getItem("fakedData");
+            if (previousOrderString) {
+              const parsedOrder = JSON.parse(previousOrderString);
+              fakebackendData.push(...parsedOrder);
+            }
+            fakebackendData.push(...cart);
+
+            window.localStorage.setItem(
+              "fakedData",
+              JSON.stringify(fakebackendData),
+            );
+            await fetch("/api/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(cart),
+            });
             router.push("/checkout");
           }}
           className="flex-1 bg-black text-white px-4 py-3 rounded-xl font-semibold hover:bg-gray-800 transition"

@@ -33,14 +33,14 @@
 - [x] React Context across routes
 - [x] Remove item from cart (context state updates)
 - [x] Order summary page — show order details + "pay after meal" message (no form needed, in-store only)
-- [ ] `localStorage` persistence (`useEffect` + hydration)
+- [x] `localStorage` persistence (`useEffect` + hydration)
 
 ### Backend (Node.js + Next.js)
 
-- [ ] What is Node.js and how Next.js runs on top of it
-- [ ] What is an HTTP request/response cycle
-- [ ] Next.js Route Handlers (`app/api/*/route.ts`) — the Node.js server inside Next.js
-- [ ] Reading request body, returning JSON responses
+- [x] What is Node.js and how Next.js runs on top of it
+- [x] What is an HTTP request/response cycle
+- [x] Next.js Route Handlers (`app/api/*/route.ts`) — the Node.js server inside Next.js
+- [x] Reading request body, returning JSON responses
 - [ ] Connecting to a database (e.g. SQLite or Postgres)
 - [ ] Server Actions — running server code directly from a form submit
 - [ ] Environment variables (`.env.local`) — keeping secrets off the client
@@ -51,8 +51,7 @@ Food order system with two sides:
 
 **Customer side (current focus)**
 
-- Menu browsing, item customization, cart, checkout, order confirmation  
-
+- Menu browsing, item customization, cart, checkout, order confirmation
 
 **Store side (future)**
 

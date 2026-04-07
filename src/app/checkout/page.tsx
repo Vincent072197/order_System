@@ -1,12 +1,19 @@
 "use client";
-import { useCartContext } from "@/src/context/CartContext";
+import { CartItem, useCartContext } from "@/src/context/CartContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 export default function Checkout() {
-  const { cart, reset } = useCartContext();
+  const { reset } = useCartContext();
+  // const cart: Array<CartItem> = JSON.parse(
+  //   window.localStorage.getItem("fakedData") || "[]",
+  // );
+  // Next.js render component on server side first, where window does not exist, so need to useState or useEffect to handle this case.
+  const [cart] = useState<Array<CartItem>>(() => {
+    if (typeof window === "undefined") return [];
+    return JSON.parse(localStorage.getItem("fakedData") || "[]") || [];
+  });
   const router = useRouter();
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
   useEffect(() => {
     reset();
   }, []);
@@ -47,6 +54,14 @@ export default function Checkout() {
           className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200 transition"
         >
           Back to Menu
+        </button>
+        <button
+          onClick={() => {
+            window.localStorage.removeItem("fakedData");
+          }}
+          className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200 transition"
+        >
+          pretend this order has done
         </button>
       </div>
     </div>
