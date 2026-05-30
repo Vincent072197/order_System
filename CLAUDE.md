@@ -20,8 +20,10 @@ ordering system. Stack chosen by the user:
 - **Backend**: self-hosted Postgres in Docker, **self-written auth** (no Lucia,
   no Auth.js — argon2id + DB-backed sessions + double-submit CSRF).
 - **Frontend / API**: Next.js 16 (App Router) + React 19.
-- **Deployment target**: Vercel for the app or self-hosted Docker; Postgres
-  stays self-hosted.
+- **Deployment target**: Vercel for the app or self-hosted Docker. Postgres
+  is self-hosted for production; the **hosted customer demo runs on Vercel +
+  Supabase (managed Postgres, session pooler)** — `src/lib/db.ts` enables TLS
+  + caps the pool when `DB_HOST` isn't localhost.
 - **External integrations** (planned, not built): Foodpanda partner API,
   ESC/POS or cloud receipt printer.
 
@@ -137,8 +139,20 @@ argon2id, sessions, CSRF, login/logout/me APIs, `/staff/login` form,
 `/staff` landing page (server component, `requireStaff()` guard),
 account lockout, audit log of login events. Demo credentials below.
 
-### P2 — Staff order dashboard ⏳ NOT STARTED (next slice)
-Concretely:
+### P2 — Staff order dashboard ✅ DONE
+Built as committed slices B1–B5:
+- B1: pure state machine in `src/lib/orders.ts` (`checkOrderTransition`,
+  `allowedNextStatuses`).
+- B2: `PATCH /api/staff/orders/[publicId]` — session validation, tenant
+  isolation (404 cross-tenant), `SELECT…FOR UPDATE`, transactional
+  `UPDATE` + `audit_log`.
+- B3: `/staff/orders` list, server-rendered + 4s polling via
+  `GET /api/staff/orders`.
+- B4: `/staff/orders/[publicId]` detail + role-aware `StatusActions`.
+- B5: `PrintQueue` + `ConsolePrinter` in `src/lib/print.ts`; kitchen
+  ticket enqueued post-commit on `→ confirmed`.
+
+Original spec (kept for reference):
 - `/staff/orders` list page. Start with polling every 3–5s; upgrade to SSE
   via Postgres `LISTEN`/`NOTIFY` once the polling cost matters. Don't reach
   for WebSockets unless we actually need bi-directional.
@@ -157,6 +171,23 @@ Concretely:
   SUNMI cloud, etc.). Don't bake hardware specifics into the call site.
 - Every state change writes `audit_log` with `actor_kind='staff'` and the
   staff's public_id, plus `from_status` / `to_status` in the payload.
+
+### P2.5 — Staff menu admin CRUD ✅ DONE
+`/staff/menu` (owner/manager only — guarded by `canEditMenu` in
+`src/lib/auth/api.ts`, both at the page and in every API route). Logic in
+`src/lib/menuAdmin.ts`, all writes audited, Zod bounds mirror DB CHECKs.
+- Items: POST `/api/staff/menu/items`, PATCH/DELETE `/[publicId]`.
+- Categories: POST `/api/staff/menu/categories`, PATCH/DELETE `/[slug]`
+  (slug immutable after create).
+- Option groups + choices: POST/PATCH/DELETE under
+  `/api/staff/menu/option-groups` and `/option-choices`.
+- **Smart delete**: an item with order history (`order_items` RESTRICT) or
+  a category with items is soft-deleted (`is_available`/`is_active` =
+  false); otherwise hard-deleted. Option groups/choices hard-delete (orders
+  snapshot them, no FK).
+- **Migration `0004_option_group_public_id.sql`** added `public_id` to
+  `menu_option_groups` so groups are UUID-addressable (§3 rule 2) — they
+  were the one menu table that lacked it.
 
 ### P3 — Foodpanda webhook ⏳ BLOCKED on partner credentials
 Schema is ready (`orders.source = 'foodpanda'`, unique `external_ref`).
