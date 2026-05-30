@@ -56,3 +56,80 @@ export const menuItemUpdateSchema = menuItemCreateSchema
   .partial()
   .refine((o) => Object.keys(o).length > 0, "No fields to update");
 export type MenuItemUpdateInput = z.infer<typeof menuItemUpdateSchema>;
+
+// --- Staff menu admin (Slice C2: categories) -------------------------------
+// Categories are addressed by slug (URL-safe, unique per restaurant). slug is
+// immutable after creation (menu_items reference category_id, not slug, but
+// the customer menu anchors on slug — keep it stable).
+export const menuCategoryCreateSchema = z.object({
+  slug: categorySlug,
+  title: z.string().min(1).max(100),
+  sortOrder: z.number().int().min(0).max(100000).default(0),
+  isActive: z.boolean().default(true),
+});
+export type MenuCategoryCreateInput = z.infer<typeof menuCategoryCreateSchema>;
+
+export const menuCategoryUpdateSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    sortOrder: z.number().int().min(0).max(100000).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((o) => Object.keys(o).length > 0, "No fields to update");
+export type MenuCategoryUpdateInput = z.infer<typeof menuCategoryUpdateSchema>;
+
+// --- Staff menu admin (Slice C3: option groups + choices) ------------------
+// Bounds mirror menu_option_groups / menu_option_choices CHECKs in
+// 0001_init.sql (selection_kind single|multi, min<=max, price_delta range).
+export const optionGroupCreateSchema = z
+  .object({
+    itemPublicId: uuid, // parent menu item
+    title: z.string().min(1).max(100),
+    selectionKind: z.enum(["single", "multi"]),
+    minChoices: z.number().int().min(0).max(50).default(0),
+    maxChoices: z.number().int().min(1).max(50).default(1),
+    sortOrder: z.number().int().min(0).max(100000).default(0),
+  })
+  .refine((o) => o.minChoices <= o.maxChoices, {
+    message: "minChoices must be <= maxChoices",
+    path: ["minChoices"],
+  });
+export type OptionGroupCreateInput = z.infer<typeof optionGroupCreateSchema>;
+
+export const optionGroupUpdateSchema = z
+  .object({
+    title: z.string().min(1).max(100).optional(),
+    selectionKind: z.enum(["single", "multi"]).optional(),
+    minChoices: z.number().int().min(0).max(50).optional(),
+    maxChoices: z.number().int().min(1).max(50).optional(),
+    sortOrder: z.number().int().min(0).max(100000).optional(),
+  })
+  .refine((o) => Object.keys(o).length > 0, "No fields to update")
+  .refine(
+    (o) =>
+      o.minChoices === undefined ||
+      o.maxChoices === undefined ||
+      o.minChoices <= o.maxChoices,
+    { message: "minChoices must be <= maxChoices", path: ["minChoices"] },
+  );
+export type OptionGroupUpdateInput = z.infer<typeof optionGroupUpdateSchema>;
+
+export const optionChoiceCreateSchema = z.object({
+  groupPublicId: uuid, // parent option group
+  label: z.string().min(1).max(100),
+  // NUMERIC(12,2), CHECK price_delta > -1000000 AND < 1000000.
+  priceDelta: z.number().gt(-1000000).lt(1000000).default(0),
+  isDefault: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).max(100000).default(0),
+});
+export type OptionChoiceCreateInput = z.infer<typeof optionChoiceCreateSchema>;
+
+export const optionChoiceUpdateSchema = z
+  .object({
+    label: z.string().min(1).max(100).optional(),
+    priceDelta: z.number().gt(-1000000).lt(1000000).optional(),
+    isDefault: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).max(100000).optional(),
+  })
+  .refine((o) => Object.keys(o).length > 0, "No fields to update");
+export type OptionChoiceUpdateInput = z.infer<typeof optionChoiceUpdateSchema>;

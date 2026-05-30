@@ -7,6 +7,8 @@ import type {
   AdminMenuCategory,
   AdminMenuItem,
 } from "@/src/lib/menuAdmin";
+import { withCsrf } from "./csrf";
+import OptionsEditor from "./OptionsEditor";
 
 type FormState = {
   categorySlug: string;
@@ -48,6 +50,7 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
   const [form, setForm] = useState<FormState>(() => emptyForm(categories));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null); // item publicId
 
   function openCreate() {
     setForm(emptyForm(categories));
@@ -183,38 +186,52 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
             {catItems.map((it) => (
               <div
                 key={it.publicId}
-                className="flex items-center justify-between bg-white rounded-xl shadow px-4 py-3"
+                className="bg-white rounded-xl shadow px-4 py-3"
               >
-                <div>
-                  <div className="font-medium">
-                    {it.title}
-                    {!it.isAvailable && (
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                        停售
-                      </span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">
+                      {it.title}
+                      {!it.isAvailable && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          停售
+                        </span>
+                      )}
+                    </div>
+                    {it.description && (
+                      <div className="text-sm text-gray-500">{it.description}</div>
                     )}
                   </div>
-                  {it.description && (
-                    <div className="text-sm text-gray-500">{it.description}</div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">NT$ {it.price}</span>
+                    <button
+                      onClick={() =>
+                        setExpanded(expanded === it.publicId ? null : it.publicId)
+                      }
+                      disabled={busy}
+                      className="text-sm text-gray-600 hover:underline disabled:opacity-50"
+                    >
+                      選項 ({it.options.length})
+                    </button>
+                    <button
+                      onClick={() => openEdit(it)}
+                      disabled={busy}
+                      className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+                    >
+                      編輯
+                    </button>
+                    <button
+                      onClick={() => remove(it)}
+                      disabled={busy}
+                      className="text-sm text-rose-600 hover:underline disabled:opacity-50"
+                    >
+                      刪除
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold">NT$ {it.price}</span>
-                  <button
-                    onClick={() => openEdit(it)}
-                    disabled={busy}
-                    className="text-sm text-blue-600 hover:underline disabled:opacity-50"
-                  >
-                    編輯
-                  </button>
-                  <button
-                    onClick={() => remove(it)}
-                    disabled={busy}
-                    className="text-sm text-rose-600 hover:underline disabled:opacity-50"
-                  >
-                    刪除
-                  </button>
-                </div>
+                {expanded === it.publicId && (
+                  <OptionsEditor itemPublicId={it.publicId} groups={it.options} />
+                )}
               </div>
             ))}
           </div>
@@ -329,18 +346,3 @@ function ItemForm({
   );
 }
 
-// Double-submit CSRF: echo the non-httpOnly cookie back as a header.
-function withCsrf(headers: Record<string, string>): Record<string, string> {
-  const csrf = readCookie("staff_csrf");
-  return csrf ? { ...headers, "x-csrf-token": csrf } : headers;
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const prefix = `${name}=`;
-  for (const part of document.cookie.split("; ")) {
-    if (part.startsWith(prefix))
-      return decodeURIComponent(part.slice(prefix.length));
-  }
-  return null;
-}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/src/lib/auth/server";
 import { canEditMenu } from "@/src/lib/auth/api";
 import { loadAdminMenu } from "@/src/lib/menuAdmin";
+import CategoryAdmin from "./CategoryAdmin";
 import MenuAdmin from "./MenuAdmin";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,10 @@ export default async function StaffMenuPage() {
   return (
     <main className="min-h-screen p-6 max-w-4xl mx-auto">
       {header}
-      <MenuAdmin initialMenu={menu} />
+      <div className="space-y-6">
+        <CategoryAdmin categories={menu.categories} />
+        <MenuAdmin initialMenu={menu} />
+      </div>
     </main>
   );
 }
