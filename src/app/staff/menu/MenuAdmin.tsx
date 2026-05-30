@@ -196,7 +196,7 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
       {byCategory.map(({ category, items: catItems }) => (
         <section key={category.slug}>
           <h2 className="text-sm font-semibold text-gray-500 mb-2">
-            {category.title}
+            <span className="text-amber-800">{category.title}</span>
             {!category.isActive && "（已停用）"}
           </h2>
           <div className="space-y-2">
@@ -211,7 +211,7 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">
-                      {it.title}
+                      <span className="text-amber-800">{it.title}</span>
                       {!it.isAvailable && (
                         <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                           缺貨
@@ -219,7 +219,9 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                       )}
                     </div>
                     {it.description && (
-                      <div className="text-sm text-gray-500">{it.description}</div>
+                      <div className="text-sm text-gray-500">
+                        {it.description}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
@@ -235,7 +237,9 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                     </button>
                     <button
                       onClick={() =>
-                        setExpanded(expanded === it.publicId ? null : it.publicId)
+                        setExpanded(
+                          expanded === it.publicId ? null : it.publicId,
+                        )
                       }
                       disabled={busy}
                       className="text-sm text-gray-600 hover:underline disabled:opacity-50"
@@ -259,7 +263,10 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                   </div>
                 </div>
                 {expanded === it.publicId && (
-                  <OptionsEditor itemPublicId={it.publicId} groups={it.options} />
+                  <OptionsEditor
+                    itemPublicId={it.publicId}
+                    groups={it.options}
+                  />
                 )}
               </div>
             ))}
@@ -374,4 +381,3 @@ function ItemForm({
     </div>
   );
 }
-

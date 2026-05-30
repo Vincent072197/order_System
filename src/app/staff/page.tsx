@@ -28,6 +28,12 @@ export default async function StaffHomePage() {
         >
           訂單列表
         </Link>
+        <Link
+          href="/staff/tables"
+          className="inline-block px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300"
+        >
+          桌位 QR
+        </Link>
         {canEditMenu(staff.role) && (
           <Link
             href="/staff/menu"

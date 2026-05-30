@@ -24,11 +24,12 @@ const pool =
     // rejectUnauthorized:false accepts the provider's cert without bundling a
     // CA — acceptable for a demo. Pin a CA before going to production.
     ssl: isLocalDb ? undefined : { rejectUnauthorized: false },
-    // On Vercel each serverless instance opens its own pool, so keep the
-    // per-instance count low and let Supabase's pooler multiplex. 10 was fine
-    // for a single long-lived local process; it's not for serverless fan-out.
-    max: isLocalDb ? 10 : 3,
-    idleTimeoutMillis: 30_000,
+    // On Vercel each serverless instance opens its own pool, and Supabase's
+    // free session pooler caps total clients at 15. Keep one connection per
+    // instance and release it quickly so concurrent instances don't exhaust
+    // the cap. 10 was fine for a single long-lived local process.
+    max: isLocalDb ? 10 : 1,
+    idleTimeoutMillis: isLocalDb ? 30_000 : 10_000,
     connectionTimeoutMillis: 5_000,
     statement_timeout: 10_000,
     query_timeout: 10_000,
