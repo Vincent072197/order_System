@@ -207,6 +207,10 @@ keys in hand. Do not scrape; do not use unofficial endpoints.
 ### P4 — Customer-side polish ✅ DONE
 - ✅ **P4a — Order status page**: `/order/[publicId]` (read-only by UUID) +
   `GET /api/orders/[publicId]`, polls every 5s. Linked from checkout.
+- ✅ **Order history** (`/history`): this device's placed orders, kept in
+  localStorage (`src/lib/orderHistoryClient.ts`, recorded on checkout),
+  each fetched via the public status API. Header has a 🧾 link to it
+  (distinct from the 🛒 cart link).
 - ✅ **P4b — HMAC-signed table tokens**: `src/lib/auth/tableToken.ts`
   (`signTableToken`/`verifyTableToken`, 6h TTL, pg-free so proxy.ts imports
   it). proxy.ts mints a `table_token` httpOnly cookie when a customer hits

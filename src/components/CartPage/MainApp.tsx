@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCartContext } from "@/src/context/CartContext";
 import { useToast } from "@/src/components/ui/Toast";
+import { recordOrder } from "@/src/lib/orderHistoryClient";
 
 export function CartPage() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export function CartPage() {
       if (!res.ok) {
         throw new Error(body.error ?? `Failed (${res.status})`);
       }
+      if (body.orderId) recordOrder(body.orderId, tableId, Date.now());
       toast("訂單已送出 🎉", "success");
       reset();
       router.push(`/checkout?orderId=${body.orderId}`);
