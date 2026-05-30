@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { StaffOrderSummary } from "@/src/lib/staffOrders";
 import { STATUS_BADGE, STATUS_LABEL } from "./statusMeta";
+import {
+  DEFAULT_SOUND,
+  SOUND_PRESETS,
+  SOUND_STORAGE_KEY,
+  isSoundId,
+  playSound,
+  type SoundId,
+} from "./sounds";
 
 const POLL_MS = 4000;
 
@@ -15,32 +23,29 @@ export default function OrdersBoard({
   const [orders, setOrders] = useState(initial);
   const [stale, setStale] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
+  const [sound, setSound] = useState<SoundId>(DEFAULT_SOUND);
   // publicIds that arrived since the page loaded — highlighted until acknowledged.
   const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
 
-  // Ids we've already seen, so we only alert on genuinely new orders.
   const seenRef = useRef<Set<string>>(new Set(initial.map((o) => o.publicId)));
   const soundOnRef = useRef(false);
+  const soundRef = useRef<SoundId>(DEFAULT_SOUND); // current choice, read in poll callback
   const audioRef = useRef<AudioContext | null>(null);
 
-  const beep = useCallback(() => {
-    const ctx = audioRef.current;
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.35);
+  // Load the saved sound choice once on mount (async callback avoids a
+  // synchronous setState in the effect body).
+  useEffect(() => {
+    (async () => {
+      const saved = window.localStorage.getItem(SOUND_STORAGE_KEY);
+      if (isSoundId(saved)) {
+        soundRef.current = saved;
+        setSound(saved);
+      }
+    })();
   }, []);
 
-  // Enabling sound must happen on a user gesture (browser autoplay policy);
-  // the click also creates/resumes the AudioContext.
-  function enableSound() {
+  // Create/resume the AudioContext — must run on a user gesture (autoplay).
+  function ensureCtx(): AudioContext {
     if (!audioRef.current) {
       const Ctor =
         window.AudioContext ||
@@ -49,9 +54,29 @@ export default function OrdersBoard({
       audioRef.current = new Ctor();
     }
     audioRef.current.resume();
+    return audioRef.current;
+  }
+
+  function preview() {
+    playSound(ensureCtx(), soundRef.current);
+  }
+
+  function enableSound() {
+    ensureCtx();
     soundOnRef.current = true;
     setSoundOn(true);
-    beep(); // confirmation blip
+    preview();
+  }
+
+  function changeSound(id: SoundId) {
+    soundRef.current = id;
+    setSound(id);
+    try {
+      window.localStorage.setItem(SOUND_STORAGE_KEY, id);
+    } catch {
+      /* best-effort */
+    }
+    playSound(ensureCtx(), id); // hear it immediately
   }
 
   useEffect(() => {
@@ -76,7 +101,9 @@ export default function OrdersBoard({
             incoming.forEach((o) => next.add(o.publicId));
             return next;
           });
-          if (soundOnRef.current) beep();
+          if (soundOnRef.current && audioRef.current) {
+            playSound(audioRef.current, soundRef.current);
+          }
           document.title = `🔔 ${incoming.length} 筆新訂單`;
         }
         setOrders(data.orders);
@@ -89,7 +116,7 @@ export default function OrdersBoard({
       alive = false;
       clearInterval(id);
     };
-  }, [beep]);
+  }, []);
 
   function acknowledge() {
     setFreshIds(new Set());
@@ -98,7 +125,7 @@ export default function OrdersBoard({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         {freshIds.size > 0 ? (
           <button
             onClick={acknowledge}
@@ -109,16 +136,38 @@ export default function OrdersBoard({
         ) : (
           <span className="text-sm text-gray-400">即時更新中（每 4 秒）</span>
         )}
-        {!soundOn ? (
-          <button
-            onClick={enableSound}
-            className="text-sm px-3 py-1.5 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300"
-          >
-            🔕 開啟提示音
-          </button>
-        ) : (
-          <span className="text-sm text-emerald-600">🔔 提示音已開</span>
-        )}
+
+        <div className="flex items-center gap-2">
+          {!soundOn ? (
+            <button
+              onClick={enableSound}
+              className="text-sm px-3 py-1.5 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300"
+            >
+              🔕 開啟提示音
+            </button>
+          ) : (
+            <>
+              <span className="text-sm text-emerald-600">🔔</span>
+              <select
+                value={sound}
+                onChange={(e) => changeSound(e.target.value as SoundId)}
+                className="text-sm border rounded-lg px-2 py-1.5"
+              >
+                {SOUND_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={preview}
+                className="text-sm px-3 py-1.5 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                試聽
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {stale && (
