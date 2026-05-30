@@ -334,16 +334,16 @@ export async function updateMenuItem(
 }
 
 /**
- * Delete an item. order_items references menu_items ON DELETE RESTRICT, so an
- * item that has ever been ordered can't be hard-deleted — we soft-delete it
- * (is_available = false) instead so order history stays intact. A never-ordered
- * item is removed for real. Returns which path was taken.
+ * Hard-delete an item. Safe because order_items snapshots everything and its
+ * FK is ON DELETE SET NULL (migration 0005) — history is untouched, the link
+ * is just nulled. "Temporarily out of stock" is a separate toggle
+ * (is_available), not a delete.
  */
 export async function deleteMenuItem(
   restaurantId: number,
   publicId: string,
   actor: Actor,
-): Promise<{ softDeleted: boolean }> {
+): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -356,22 +356,9 @@ export async function deleteMenuItem(
     if (!cur.rows[0]) {
       throw new MenuAdminError("Menu item not found", "ITEM_NOT_FOUND");
     }
-    const id = Number(cur.rows[0].id);
-
-    const used = await client.query(
-      `SELECT 1 FROM order_items WHERE menu_item_id = $1 LIMIT 1`,
-      [id],
-    );
-    const softDeleted = (used.rowCount ?? 0) > 0;
-
-    if (softDeleted) {
-      await client.query(`UPDATE menu_items SET is_available = FALSE WHERE id = $1`, [id]);
-    } else {
-      await client.query(`DELETE FROM menu_items WHERE id = $1`, [id]);
-    }
-    await writeAudit(client, actor, "menu_item.delete", publicId, { softDeleted });
+    await client.query(`DELETE FROM menu_items WHERE id = $1`, [Number(cur.rows[0].id)]);
+    await writeAudit(client, actor, "menu_item.delete", publicId, {});
     await client.query("COMMIT");
-    return { softDeleted };
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     throw err;
@@ -471,15 +458,15 @@ export async function updateMenuCategory(
 }
 
 /**
- * Delete a category. menu_items references category_id ON DELETE RESTRICT, so a
- * category that still has items can't be removed — we soft-delete it
- * (is_active = false). An empty category is removed for real.
+ * Delete a category. A category isn't snapshotted anywhere and menu_items.
+ * category_id is NOT NULL, so a category with items can't be safely removed —
+ * we block it (caller must empty it first). An empty category is hard-deleted.
  */
 export async function deleteMenuCategory(
   restaurantId: number,
   slug: string,
   actor: Actor,
-): Promise<{ softDeleted: boolean }> {
+): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -496,15 +483,15 @@ export async function deleteMenuCategory(
       `SELECT 1 FROM menu_items WHERE category_id = $1 LIMIT 1`,
       [id],
     );
-    const softDeleted = (used.rowCount ?? 0) > 0;
-    if (softDeleted) {
-      await client.query(`UPDATE menu_categories SET is_active = FALSE WHERE id = $1`, [id]);
-    } else {
-      await client.query(`DELETE FROM menu_categories WHERE id = $1`, [id]);
+    if ((used.rowCount ?? 0) > 0) {
+      throw new MenuAdminError(
+        `Category "${slug}" still has items`,
+        "CATEGORY_IN_USE",
+      );
     }
-    await writeAuditFor(client, actor, "menu_category.delete", "menu_category", slug, { softDeleted });
+    await client.query(`DELETE FROM menu_categories WHERE id = $1`, [id]);
+    await writeAuditFor(client, actor, "menu_category.delete", "menu_category", slug, {});
     await client.query("COMMIT");
-    return { softDeleted };
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     throw err;

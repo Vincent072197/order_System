@@ -86,12 +86,14 @@ export default function CategoryAdmin({
         credentials: "same-origin",
       });
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(data.error ?? `刪除失敗 (${res.status})`);
+        const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        setError(
+          data.code === "CATEGORY_IN_USE"
+            ? "此分類底下還有品項，請先把品項移到其他分類或刪除後再刪分類。"
+            : (data.error ?? `刪除失敗 (${res.status})`),
+        );
         return;
       }
-      const data = (await res.json()) as { softDeleted?: boolean };
-      if (data.softDeleted) alert("此分類底下還有品項，無法真正刪除，已改為「停用」。");
       router.refresh();
     } catch {
       setError("網路錯誤，請重試。");

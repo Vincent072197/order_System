@@ -79,11 +79,11 @@ export async function DELETE(
   }
 
   try {
-    const result = await deleteMenuItem(auth.staff.restaurantId, publicId, {
+    await deleteMenuItem(auth.staff.restaurantId, publicId, {
       publicId: auth.staff.publicId,
       clientIp: extractClientIp(request),
     });
-    return NextResponse.json({ ok: true, softDeleted: result.softDeleted });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return mapError(err, "DELETE /api/staff/menu/items/[publicId]");
   }

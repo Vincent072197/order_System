@@ -22,7 +22,8 @@ async function authorize(request: NextRequest) {
 
 function mapError(err: unknown, where: string): NextResponse {
   if (err instanceof MenuAdminError) {
-    const status = err.code === "CATEGORY_NOT_FOUND" ? 404 : 422;
+    const status =
+      err.code === "CATEGORY_NOT_FOUND" ? 404 : err.code === "CATEGORY_IN_USE" ? 409 : 422;
     return NextResponse.json({ error: err.message, code: err.code }, { status });
   }
   console.error(`[${where}] failed:`, err);
@@ -79,11 +80,11 @@ export async function DELETE(
   }
 
   try {
-    const result = await deleteMenuCategory(auth.staff.restaurantId, slug, {
+    await deleteMenuCategory(auth.staff.restaurantId, slug, {
       publicId: auth.staff.publicId,
       clientIp: extractClientIp(request),
     });
-    return NextResponse.json({ ok: true, softDeleted: result.softDeleted });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return mapError(err, "DELETE /api/staff/menu/categories/[slug]");
   }

@@ -181,13 +181,18 @@ Original spec (kept for reference):
   (slug immutable after create).
 - Option groups + choices: POST/PATCH/DELETE under
   `/api/staff/menu/option-groups` and `/option-choices`.
-- **Smart delete**: an item with order history (`order_items` RESTRICT) or
-  a category with items is soft-deleted (`is_available`/`is_active` =
-  false); otherwise hard-deleted. Option groups/choices hard-delete (orders
-  snapshot them, no FK).
-- **Migration `0004_option_group_public_id.sql`** added `public_id` to
-  `menu_option_groups` so groups are UUID-addressable (§3 rule 2) — they
-  were the one menu table that lacked it.
+- **Delete = hard delete.** Items always hard-delete: `order_items` now
+  snapshots everything and its FK is `ON DELETE SET NULL` (migration 0005),
+  so deleting an ordered item nulls the link but leaves history intact.
+  Option groups/choices hard-delete too (orders snapshot them, no FK).
+  Categories hard-delete only when empty — a category with items is rejected
+  (`CATEGORY_IN_USE` → 409); the operator must empty it first.
+- **"Out of stock" is `menu_items.is_available`**, a one-click toggle on each
+  item row — separate from deletion.
+- Migrations: **`0004`** added `public_id` to `menu_option_groups` (§3 rule
+  2); **`0005_order_items_item_set_null.sql`** made `order_items.menu_item_id`
+  nullable + `ON DELETE SET NULL`. NOTE: P5 "top items" reporting can't group
+  by `menu_item_id` for deleted items — group by `title_snapshot` instead.
 
 ### P3 — Foodpanda webhook ⏳ BLOCKED on partner credentials
 Schema is ready (`orders.source = 'foodpanda'`, unique `external_ref`).

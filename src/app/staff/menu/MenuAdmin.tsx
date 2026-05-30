@@ -124,9 +124,29 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
         setError(data.error ?? `刪除失敗 (${res.status})`);
         return;
       }
-      const data = (await res.json()) as { softDeleted?: boolean };
-      if (data.softDeleted) {
-        alert("此品項已被點過，無法真正刪除，已改為「停售」。");
+      router.refresh();
+    } catch {
+      setError("網路錯誤，請重試。");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // One-click "out of stock" toggle — flips is_available without opening the form.
+  async function toggleStock(it: AdminMenuItem) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/staff/menu/items/${it.publicId}`, {
+        method: "PATCH",
+        headers: withCsrf({ "content-type": "application/json" }),
+        credentials: "same-origin",
+        body: JSON.stringify({ isAvailable: !it.isAvailable }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? `切換失敗 (${res.status})`);
+        return;
       }
       router.refresh();
     } catch {
@@ -193,8 +213,8 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                     <div className="font-medium">
                       {it.title}
                       {!it.isAvailable && (
-                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                          停售
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                          缺貨
                         </span>
                       )}
                     </div>
@@ -204,6 +224,15 @@ export default function MenuAdmin({ initialMenu }: { initialMenu: AdminMenu }) {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold">NT$ {it.price}</span>
+                    <button
+                      onClick={() => toggleStock(it)}
+                      disabled={busy}
+                      className={`text-sm hover:underline disabled:opacity-50 ${
+                        it.isAvailable ? "text-amber-600" : "text-emerald-600"
+                      }`}
+                    >
+                      {it.isAvailable ? "標為缺貨" : "恢復供應"}
+                    </button>
                     <button
                       onClick={() =>
                         setExpanded(expanded === it.publicId ? null : it.publicId)
