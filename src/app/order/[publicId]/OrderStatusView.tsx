@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { PublicOrderView } from "@/src/lib/orders";
 import { STATUS_BADGE, STATUS_LABEL } from "@/src/app/staff/orders/statusMeta";
+import { useCartContext } from "@/src/context/CartContext";
 
 const POLL_MS = 5000;
 
@@ -23,6 +25,7 @@ const FLOW = ["pending", "preparing", "completed"];
 
 export default function OrderStatusView({ initial }: { initial: PublicOrderView }) {
   const [order, setOrder] = useState(initial);
+  const { tableId } = useCartContext();
 
   useEffect(() => {
     let alive = true;
@@ -99,6 +102,13 @@ export default function OrderStatusView({ initial }: { initial: PublicOrderView 
         <span>合計</span>
         <span>NT$ {order.total}</span>
       </div>
+
+      <Link
+        href={tableId ? `/table/${tableId}` : "/"}
+        className="block w-full text-center py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition"
+      >
+        繼續點餐（加點）
+      </Link>
 
       <p className="text-center text-xs text-gray-400">此頁會自動更新訂單狀態</p>
     </div>
