@@ -269,10 +269,13 @@ later PR without surfacing.
 - **`Math.round(n*100)/100` is good enough for TWD** but fails for
   rounding-sensitive currencies. If multi-currency arrives, switch to
   integer minor units throughout.
-- **The home page (`/`) shows a placeholder.** Ordering only works via
-  `/table/[uuid]` (which sets `tableId` in the cart context). Don't add
-  a "place order" button to `/` — that path can't satisfy the dine-in
-  CHECK constraint on `orders`.
+- **`/` (`HomeGate`) redirects to the remembered table** (`tableId` is now
+  persisted in localStorage, key `ordersys.tableId.v1`) or shows a "scan QR"
+  prompt if none. Ordering still only happens via `/table/[uuid]` — don't add
+  a "place order" button to `/` (the dine-in CHECK needs a `table_id`).
+  Checkout's CTA is **「繼續點餐」→ `/table/[tableId]`** so customers can add
+  more rounds; each submit is a separate order. This is why the flow no
+  longer dead-ends after one order / forces a re-scan.
 
 ---
 

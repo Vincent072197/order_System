@@ -1,4 +1,5 @@
-import App from "../components/menuPage/mainApp";
+import HomeGate from "./HomeGate";
+
 export default function Home() {
-  return <App />;
+  return <HomeGate />;
 }

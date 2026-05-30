@@ -40,6 +40,7 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | null>(null);
 const STORAGE_KEY = "ordersys.cart.v1";
+const TABLE_KEY = "ordersys.tableId.v1";
 
 export default function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -52,7 +53,25 @@ export default function CartProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const [tableId, setTableId] = useState<string | null>(null);
+  // Persisted so the table survives navigating away (checkout, history, "/")
+  // and page reloads — no need to re-scan the QR during a dining session.
+  const [tableId, setTableIdState] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.localStorage.getItem(TABLE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const setTableId = (id: string) => {
+    setTableIdState(id);
+    try {
+      window.localStorage.setItem(TABLE_KEY, id);
+    } catch {
+      /* quota / private mode */
+    }
+  };
 
   useEffect(() => {
     try {
