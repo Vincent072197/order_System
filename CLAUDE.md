@@ -23,7 +23,10 @@ ordering system. Stack chosen by the user:
 - **Deployment target**: Vercel for the app or self-hosted Docker. Postgres
   is self-hosted for production; the **hosted customer demo runs on Vercel +
   Supabase (managed Postgres, session pooler)** — `src/lib/db.ts` enables TLS
-  + caps the pool when `DB_HOST` isn't localhost.
+  + caps the pool when `DB_HOST` isn't localhost. **`vercel.json` pins
+  functions to `sin1` (Singapore) to match Supabase `ap-southeast-1`** — each
+  request makes several sequential DB round trips, so co-locating is the main
+  lever against per-click latency.
 - **External integrations** (planned, not built): Foodpanda partner API,
   ESC/POS or cloud receipt printer.
 
