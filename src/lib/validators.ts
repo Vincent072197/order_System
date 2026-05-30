@@ -31,3 +31,28 @@ export const staffLoginSchema = z.object({
   password: z.string().min(1).max(1024),
 });
 export type StaffLoginInput = z.infer<typeof staffLoginSchema>;
+
+// --- Staff menu admin (Slice C1: items) -----------------------------------
+// Bounds mirror the DB CHECK constraints in 0001_init.sql so a bad payload is
+// rejected with a 400 before it ever reaches Postgres. price < 1_000_000 and
+// title length 1..200 match menu_items exactly.
+const categorySlug = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/, "Invalid category slug");
+
+export const menuItemCreateSchema = z.object({
+  categorySlug,
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).default(""),
+  // NUMERIC(12,2), CHECK price >= 0 AND price < 1000000.
+  price: z.number().min(0).max(999999.99),
+  isAvailable: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(100000).default(0),
+});
+export type MenuItemCreateInput = z.infer<typeof menuItemCreateSchema>;
+
+// Update is a partial: only the fields the client sends are changed.
+export const menuItemUpdateSchema = menuItemCreateSchema
+  .partial()
+  .refine((o) => Object.keys(o).length > 0, "No fields to update");
+export type MenuItemUpdateInput = z.infer<typeof menuItemUpdateSchema>;
