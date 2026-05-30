@@ -135,6 +135,78 @@ export function allowedNextStatuses(
   );
 }
 
+// ---------------------------------------------------------------------------
+// P4 — customer-facing order status (read-only, by public_id only).
+// No restaurant scoping: the customer only holds the order's UUID, which is
+// unguessable (same trust model as the table UUID). Returns null if absent.
+// ---------------------------------------------------------------------------
+
+export type PublicOrderItem = {
+  titleSnapshot: string;
+  quantity: number;
+  lineTotal: number;
+  options: string[];
+};
+
+export type PublicOrderView = {
+  publicId: string;
+  status: OrderStatus;
+  tableLabel: string | null;
+  total: number;
+  createdAt: string;
+  items: PublicOrderItem[];
+};
+
+export async function getPublicOrderStatus(
+  publicId: string,
+): Promise<PublicOrderView | null> {
+  const head = await pool.query<{
+    id: string;
+    public_id: string;
+    status: OrderStatus;
+    total: string;
+    created_at: string;
+    table_label: string | null;
+  }>(
+    `SELECT o.id::text, o.public_id, o.status, o.total::text AS total,
+            o.created_at, t.label AS table_label
+       FROM orders o
+       LEFT JOIN tables t ON t.id = o.table_id
+      WHERE o.public_id = $1
+      LIMIT 1`,
+    [publicId],
+  );
+  const o = head.rows[0];
+  if (!o) return null;
+
+  const items = await pool.query<{
+    title_snapshot: string;
+    quantity: number;
+    line_total: string;
+    options_snapshot: { label: string }[];
+  }>(
+    `SELECT title_snapshot, quantity, line_total::text, options_snapshot
+       FROM order_items
+      WHERE order_id = $1
+      ORDER BY id`,
+    [Number(o.id)],
+  );
+
+  return {
+    publicId: o.public_id,
+    status: o.status,
+    tableLabel: o.table_label,
+    total: Number(o.total),
+    createdAt: o.created_at,
+    items: items.rows.map((r) => ({
+      titleSnapshot: r.title_snapshot,
+      quantity: r.quantity,
+      lineTotal: Number(r.line_total),
+      options: (r.options_snapshot ?? []).map((s) => s.label),
+    })),
+  };
+}
+
 export async function placeDineInOrder(
   input: PlaceOrderInput,
   ctx: { clientIp?: string | null },

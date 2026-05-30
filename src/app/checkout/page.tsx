@@ -32,6 +32,14 @@ function CheckoutInner() {
         <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center text-yellow-800 font-medium">
           請於用餐後至櫃台結帳，謝謝！
         </div>
+        {orderId && (
+          <button
+            onClick={() => router.push(`/order/${orderId}`)}
+            className="w-full py-3 bg-blue-600 rounded-xl text-white font-medium hover:bg-blue-700 transition"
+          >
+            查看訂單狀態
+          </button>
+        )}
         <button
           onClick={() => router.push("/")}
           className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200 transition"
