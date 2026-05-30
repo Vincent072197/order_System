@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireStaff } from "@/src/lib/auth/server";
 import LogoutButton from "./LogoutButton";
 
@@ -19,8 +20,16 @@ export default async function StaffHomePage() {
         <p className="text-sm text-gray-500">Email：{staff.email}</p>
         <p className="text-sm text-gray-500">角色：{staff.role}</p>
       </section>
+      <nav className="mt-6">
+        <Link
+          href="/staff/orders"
+          className="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          訂單列表
+        </Link>
+      </nav>
       <p className="text-xs text-gray-400 mt-6">
-        訂單列表 / 出單 / 儀表板將於下一階段加入。
+        出單 / 儀表板將於下一階段加入。
       </p>
     </main>
   );

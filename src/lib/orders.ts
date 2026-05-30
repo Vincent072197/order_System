@@ -34,6 +34,107 @@ export type CreatedOrder = {
   total: number;
 };
 
+// ---------------------------------------------------------------------------
+// P2 / Slice B1 — order status state machine (pure, no DB)
+//
+// Source of truth for "which status change is legal, and who may make it".
+// The DB CHECK on orders.status guards the *set* of valid statuses; this
+// guards the *edges* between them and the role allowed to walk each edge.
+// Keep this pure so it can be unit-tested and reused by both the API
+// (PATCH handler) and any future KDS UI without pulling in a DB connection.
+// ---------------------------------------------------------------------------
+
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "served",
+  "completed",
+  "cancelled",
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+// Mirrors the union already used in src/lib/auth/sessions.ts + staff.ts.
+export type StaffRole = "owner" | "manager" | "cashier" | "kitchen";
+
+// from -> to -> roles permitted to make that exact transition.
+// A (from, to) pair absent from the map is simply not a legal transition.
+// Encodes §6 of CLAUDE.md:
+//   - kitchen may only do confirmed->preparing and preparing->ready
+//   - cashier/manager/owner may do any forward transition
+//   - cancellation is manager/owner only, and only from pending|confirmed
+const ORDER_TRANSITIONS: Record<
+  OrderStatus,
+  Partial<Record<OrderStatus, readonly StaffRole[]>>
+> = {
+  pending: {
+    confirmed: ["owner", "manager", "cashier"],
+    cancelled: ["owner", "manager"],
+  },
+  confirmed: {
+    preparing: ["owner", "manager", "cashier", "kitchen"],
+    cancelled: ["owner", "manager"],
+  },
+  preparing: { ready: ["owner", "manager", "cashier", "kitchen"] },
+  ready: { served: ["owner", "manager", "cashier"] },
+  served: { completed: ["owner", "manager", "cashier"] },
+  completed: {},
+  cancelled: {},
+};
+
+export type TransitionCheck =
+  | { ok: true }
+  | {
+      ok: false;
+      // INVALID_TRANSITION -> 409/422 in the API; ROLE_FORBIDDEN -> 403.
+      code: "INVALID_TRANSITION" | "ROLE_FORBIDDEN";
+      reason: string;
+    };
+
+/**
+ * Decide whether `role` may move an order from `from` to `to`.
+ * Pure: no I/O, no throwing. The caller turns the result into an HTTP status.
+ */
+export function checkOrderTransition(
+  from: OrderStatus,
+  to: OrderStatus,
+  role: StaffRole,
+): TransitionCheck {
+  const allowedRoles = ORDER_TRANSITIONS[from]?.[to];
+  if (!allowedRoles) {
+    return {
+      ok: false,
+      code: "INVALID_TRANSITION",
+      reason: `Cannot move an order from "${from}" to "${to}".`,
+    };
+  }
+  if (!allowedRoles.includes(role)) {
+    return {
+      ok: false,
+      code: "ROLE_FORBIDDEN",
+      reason: `Role "${role}" is not permitted to perform ${from} → ${to}.`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * The set of statuses `role` may move an order to, given its current status.
+ * Lets the UI render exactly the buttons a transition would accept without
+ * duplicating ORDER_TRANSITIONS on the client. Pure.
+ */
+export function allowedNextStatuses(
+  from: OrderStatus,
+  role: StaffRole,
+): OrderStatus[] {
+  const edges = ORDER_TRANSITIONS[from];
+  return (Object.keys(edges) as OrderStatus[]).filter((to) =>
+    edges[to]!.includes(role),
+  );
+}
+
 export async function placeDineInOrder(
   input: PlaceOrderInput,
   ctx: { clientIp?: string | null },
