@@ -59,27 +59,24 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 // Mirrors the union already used in src/lib/auth/sessions.ts + staff.ts.
 export type StaffRole = "owner" | "manager" | "cashier" | "kitchen";
 
-// from -> to -> roles permitted to make that exact transition.
-// A (from, to) pair absent from the map is simply not a legal transition.
-// Encodes §6 of CLAUDE.md:
-//   - kitchen may only do confirmed->preparing and preparing->ready
-//   - cashier/manager/owner may do any forward transition
-//   - cancellation is manager/owner only, and only from pending|confirmed
+// Simplified 2-step staff flow (the shop only wants accept + complete):
+//   pending --確認接單--> preparing --訂單完成--> completed
+// "confirmed/ready/served" stay valid enum values (DB CHECK is unchanged) but
+// are no longer part of the dine-in flow. Legacy orders still sitting in them
+// can be pushed straight forward so nothing gets stuck. Cancel = manager/owner.
+const ALL_ROLES = ["owner", "manager", "cashier", "kitchen"] as const;
+const MGR_ROLES = ["owner", "manager"] as const;
+
 const ORDER_TRANSITIONS: Record<
   OrderStatus,
   Partial<Record<OrderStatus, readonly StaffRole[]>>
 > = {
-  pending: {
-    confirmed: ["owner", "manager", "cashier"],
-    cancelled: ["owner", "manager"],
-  },
-  confirmed: {
-    preparing: ["owner", "manager", "cashier", "kitchen"],
-    cancelled: ["owner", "manager"],
-  },
-  preparing: { ready: ["owner", "manager", "cashier", "kitchen"] },
-  ready: { served: ["owner", "manager", "cashier"] },
-  served: { completed: ["owner", "manager", "cashier"] },
+  pending: { preparing: ALL_ROLES, cancelled: MGR_ROLES },
+  preparing: { completed: ALL_ROLES, cancelled: MGR_ROLES },
+  // Legacy intermediate states — keep them progressable to completion.
+  confirmed: { preparing: ALL_ROLES, cancelled: MGR_ROLES },
+  ready: { completed: ALL_ROLES, cancelled: MGR_ROLES },
+  served: { completed: ALL_ROLES },
   completed: {},
   cancelled: {},
 };

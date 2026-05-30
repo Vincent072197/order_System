@@ -130,10 +130,10 @@ export async function PATCH(
 
     await client.query("COMMIT");
 
-    // §6 / B5: moving an order to "confirmed" fires the kitchen ticket. Do it
-    // AFTER commit so we never print a ticket for an order that didn't persist,
-    // and never block the status change on a printer fault — log and move on.
-    if (toStatus === "confirmed") {
+    // B5: "確認接單" (→ preparing) fires the kitchen ticket. Do it AFTER commit
+    // so we never print a ticket for an order that didn't persist, and never
+    // block the status change on a printer fault — log and move on.
+    if (toStatus === "preparing") {
       try {
         const items = await client.query<{
           title_snapshot: string;

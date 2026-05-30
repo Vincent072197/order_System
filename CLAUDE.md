@@ -142,7 +142,12 @@ account lockout, audit log of login events. Demo credentials below.
 ### P2 — Staff order dashboard ✅ DONE
 Built as committed slices B1–B5:
 - B1: pure state machine in `src/lib/orders.ts` (`checkOrderTransition`,
-  `allowedNextStatuses`).
+  `allowedNextStatuses`). **Flow was later simplified to 2 staff actions**
+  (per owner request): `pending --確認接單--> preparing --訂單完成-->
+  completed`, plus cancel (manager/owner). `confirmed/ready/served` remain
+  valid enum values (no migration) but are out of the dine-in flow; legacy
+  orders in them can still be pushed to completion. Customer sees "製作中"
+  the moment staff accepts. Kitchen ticket + new-order alert fire on accept.
 - B2: `PATCH /api/staff/orders/[publicId]` — session validation, tenant
   isolation (404 cross-tenant), `SELECT…FOR UPDATE`, transactional
   `UPDATE` + `audit_log`.
@@ -150,7 +155,7 @@ Built as committed slices B1–B5:
   `GET /api/staff/orders`.
 - B4: `/staff/orders/[publicId]` detail + role-aware `StatusActions`.
 - B5: `PrintQueue` + `ConsolePrinter` in `src/lib/print.ts`; kitchen
-  ticket enqueued post-commit on `→ confirmed`.
+  ticket enqueued post-commit on `→ preparing` (the 確認接單 action).
 
 Original spec (kept for reference):
 - `/staff/orders` list page. Start with polling every 3–5s; upgrade to SSE

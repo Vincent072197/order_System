@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderStatus } from "@/src/lib/orders";
-import { STATUS_LABEL } from "../statusMeta";
+import { STATUS_LABEL, TRANSITION_ACTION_LABEL } from "../statusMeta";
 
 export default function StatusActions({
   publicId,
@@ -69,7 +69,9 @@ export default function StatusActions({
                 : "bg-blue-600 hover:bg-blue-700"
             }`}
           >
-            {busy === to ? "處理中…" : `→ ${STATUS_LABEL[to]}`}
+            {busy === to
+              ? "處理中…"
+              : (TRANSITION_ACTION_LABEL[to] ?? `→ ${STATUS_LABEL[to]}`)}
           </button>
         ))}
       </div>

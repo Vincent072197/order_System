@@ -8,17 +8,18 @@ const POLL_MS = 5000;
 
 // Customer-facing one-liner per status.
 const STATUS_DESC: Record<string, string> = {
-  pending: "已送出，等待餐廳確認…",
-  confirmed: "餐廳已確認，準備開始製作",
+  pending: "已送出，等待餐廳接單…",
   preparing: "餐點製作中 🍳",
-  ready: "餐點完成，即將送達 / 可取餐",
-  served: "已送達，請慢用 🙂",
-  completed: "訂單已完成，感謝光臨！",
+  completed: "訂單完成，感謝光臨！",
   cancelled: "訂單已取消",
+  // legacy states (no longer produced by the 2-step flow, kept for old orders)
+  confirmed: "餐廳已接單",
+  ready: "餐點即將送達 / 可取餐",
+  served: "已送達，請慢用 🙂",
 };
 
-// The happy-path step order for the progress bar.
-const FLOW = ["pending", "confirmed", "preparing", "ready", "served", "completed"];
+// Simplified 3-step happy path for the progress bar.
+const FLOW = ["pending", "preparing", "completed"];
 
 export default function OrderStatusView({ initial }: { initial: PublicOrderView }) {
   const [order, setOrder] = useState(initial);
@@ -63,7 +64,7 @@ export default function OrderStatusView({ initial }: { initial: PublicOrderView 
 
       {!isCancelled && (
         <div className="flex items-center justify-between">
-          {FLOW.slice(0, 5).map((s, i) => (
+          {FLOW.map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center">
               <div
                 className={`w-3 h-3 rounded-full ${

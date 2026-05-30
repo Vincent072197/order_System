@@ -4,13 +4,21 @@ import type { OrderStatus } from "@/src/lib/orders";
 // pulls `pg` into the browser bundle. Display strings + badge styles only.
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending: "待確認",
+  pending: "待接單",
   confirmed: "已確認",
   preparing: "製作中",
   ready: "可取餐",
   served: "已送出",
   completed: "已完成",
   cancelled: "已取消",
+};
+
+// Action-oriented button text for a transition, keyed by the TARGET status.
+// In the simplified flow each target is reached one way, so this is unambiguous.
+export const TRANSITION_ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
+  preparing: "確認接單",
+  completed: "訂單完成",
+  cancelled: "取消訂單",
 };
 
 export const STATUS_BADGE: Record<OrderStatus, string> = {
