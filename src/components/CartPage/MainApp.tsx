@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCartContext } from "@/src/context/CartContext";
+import { useToast } from "@/src/components/ui/Toast";
 
 export function CartPage() {
   const router = useRouter();
   const { cart, tableId, removeItem, updateQuantity, reset } = useCartContext();
+  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (!cart.length) {
     return (
@@ -31,10 +32,9 @@ export function CartPage() {
 
   async function handleSubmit() {
     if (!tableId) {
-      setError("請從桌邊 QR 碼進入再點餐。");
+      toast("請從桌邊 QR 碼進入再點餐。", "error");
       return;
     }
-    setError(null);
     setSubmitting(true);
     try {
       const payload = {
@@ -60,10 +60,11 @@ export function CartPage() {
       if (!res.ok) {
         throw new Error(body.error ?? `Failed (${res.status})`);
       }
+      toast("訂單已送出 🎉", "success");
       reset();
       router.push(`/checkout?orderId=${body.orderId}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "下單失敗");
+      toast(e instanceof Error ? e.message : "下單失敗", "error");
     } finally {
       setSubmitting(false);
     }
@@ -129,10 +130,6 @@ export function CartPage() {
       <p className="text-xs text-gray-400 mt-1">
         實際金額以送出後伺服器計算為準。
       </p>
-
-      {error && (
-        <p className="mt-3 text-sm text-red-600 text-center">{error}</p>
-      )}
 
       <div className="mt-6 flex gap-3">
         <button

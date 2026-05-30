@@ -13,6 +13,7 @@ import {
   type MenuUI,
 } from "../../Entities/menu";
 import ItemDetail from "@/src/components/menuPage/ItemDetail";
+import MenuSkeleton from "@/src/components/menuPage/MenuSkeleton";
 import { useCartContext } from "@/src/context/CartContext";
 
 type Props = { tableId?: string };
@@ -71,11 +72,7 @@ function App({ tableId }: Props) {
     );
   }
   if (!menu) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-6 text-gray-500">
-        載入中…
-      </main>
-    );
+    return <MenuSkeleton />;
   }
 
   return (

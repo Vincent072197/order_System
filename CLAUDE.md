@@ -204,7 +204,7 @@ Schema is ready (`orders.source = 'foodpanda'`, unique `external_ref`).
 Don't write this until the user has Foodpanda partner API docs + sandbox
 keys in hand. Do not scrape; do not use unofficial endpoints.
 
-### P4 — Customer-side polish ⏳ IN PROGRESS
+### P4 — Customer-side polish ✅ DONE
 - ✅ **P4a — Order status page**: `/order/[publicId]` (read-only by UUID) +
   `GET /api/orders/[publicId]`, polls every 5s. Linked from checkout.
 - ✅ **P4b — HMAC-signed table tokens**: `src/lib/auth/tableToken.ts`
@@ -213,7 +213,12 @@ keys in hand. Do not scrape; do not use unofficial endpoints.
   `/table/<uuid>` (QR stays static); `POST /api/orders` now rejects (403
   `TABLE_TOKEN_INVALID`) unless a valid, unexpired token matches the order's
   tableId. Revoke everything by rotating `TABLE_TOKEN_SECRET`.
-- ⏳ P4c — Optimistic add-to-cart UX, error toasts, loading skeletons.
+- ✅ **P4c — Front-of-house UX**: global toast system
+  (`src/components/ui/Toast.tsx`, `ToastProvider` mounted in layout +
+  `useToast()`); success toast on add-to-cart, error toast on order failure
+  (surfaces the P4b 403 nicely) + success on submit; `MenuSkeleton` while the
+  menu loads; metadata title fixed ("線上點餐"). Add-to-cart was already
+  instant (cart is local state + localStorage).
 
 ### P5 — Real-time + dashboard ⏳ NOT STARTED
 - Postgres `LISTEN`/`NOTIFY` → SSE relay for live order list + KDS view.

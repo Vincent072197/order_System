@@ -8,6 +8,7 @@ import {
 } from "@/src/components/menuPage/OptionCard";
 import type { ItemOptions } from "@/src/Entities/menu";
 import { useCartContext } from "@/src/context/CartContext";
+import { useToast } from "@/src/components/ui/Toast";
 
 export default function ItemDetail({
   itemDetails,
@@ -18,6 +19,7 @@ export default function ItemDetail({
     initialSelection(itemDetails.options),
   );
   const { addItem } = useCartContext();
+  const toast = useToast();
   const { id, title, price, options } = itemDetails;
   const handleClose = () => handleSelectedItem(null);
 
@@ -62,6 +64,7 @@ export default function ItemDetail({
       choices,
       note: "",
     });
+    toast(`已加入購物車：${title} ×${quantity}`, "success");
     handleClose();
   }
 
