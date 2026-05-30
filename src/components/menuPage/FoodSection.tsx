@@ -1,9 +1,5 @@
-import { useEffect, useRef, type RefCallback } from "react";
-import type {
-  DetailType,
-  ExtendTitleType,
-  MenuType,
-} from "../../Entities/menu";
+import type { RefCallback } from "react";
+import type { DetailType, MenuType } from "../../Entities/menu";
 import { Item } from "@/src/components/menuPage/DishItem";
 
 type FoodSectionProps = {
@@ -17,27 +13,23 @@ export default function FoodSection({
   ref,
   handleSelectedItem,
 }: FoodSectionProps) {
-  const { title, details } = section;
+  const { id, title, details } = section;
   return (
-    <>
-      <section
-        ref={ref}
-        id={title}
-        className={`scroll-mt-2 w-full mx-auto mt-2 bg-gray-50  p-2 rounded-lg shadow-sm border border-gray-100`}
-      >
-        <h2 className="text-2xl font-bold mb-4">Testing</h2>
-        <ol className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {details.map((detail) => {
-            return (
-              <Item
-                key={`Item-${detail.title}`}
-                itemDetails={detail}
-                handleSelectedItem={handleSelectedItem}
-              />
-            );
-          })}
-        </ol>
-      </section>
-    </>
+    <section
+      ref={ref}
+      id={id}
+      className="scroll-mt-2 w-full mx-auto mt-2 bg-gray-50 p-2 rounded-lg shadow-sm border border-gray-100"
+    >
+      <h2 className="text-2xl font-bold mb-4">{title}</h2>
+      <ol className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {details.map((detail) => (
+          <Item
+            key={detail.id}
+            itemDetails={detail}
+            handleSelectedItem={handleSelectedItem}
+          />
+        ))}
+      </ol>
+    </section>
   );
 }

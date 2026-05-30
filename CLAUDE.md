@@ -1,60 +1,250 @@
 @AGENTS.md
 
-# Learning Context
+## §1. Learning English — Grammar Correction Protocol
 
-## Student Profile
+Respond with all three of the following blocks:
 
-- Learning Next.js (App Router) from scratch
-- Not familiar with Node.js — backend concepts must be explained before implementation
-- Wants to understand the _why_ behind every concept, not just the _how_
+1. **Error Breakdown** 🔍 — A small table with columns: Original | Issue Type | Fix
+2. **Corrected Version** 📝 — Fix the user's sentence, keep their intended meaning and structure.
+3. **Native Speaker Version** 🗣️ — Rewrite it the way a fluent native English speaker would naturally say it.
 
-## Teaching Rules
+Then continue with the actual response.
 
-### Always do this
+---
 
-- Before writing any code, explain the concept it demonstrates (1–3 sentences max)
-- Include a small "Key things to notice" table after every code block
-- Always link the official Next.js or Node.js docs alongside every code example
-- When introducing a backend topic, explain the Node.js concept first, then show how Next.js wraps it
+## §2. Project intent — commercial-grade tableside ordering
 
-### Never do this
+This repo is being built up in phases toward a production-ready tableside
+ordering system. Stack chosen by the user:
 
-- Don't skip explaining why `"use client"` or `"use server"` is needed
-- Don't use a Next.js API (e.g. Route Handlers, Server Actions) without first explaining what problem it solves
-- Don't assume knowledge of HTTP, REST, or server concepts — explain them when they appear
+- **Backend**: self-hosted Postgres in Docker, **self-written auth** (no Lucia,
+  no Auth.js — argon2id + DB-backed sessions + double-submit CSRF).
+- **Frontend / API**: Next.js 16 (App Router) + React 19.
+- **Deployment target**: Vercel for the app or self-hosted Docker; Postgres
+  stays self-hosted.
+- **External integrations** (planned, not built): Foodpanda partner API,
+  ESC/POS or cloud receipt printer.
 
-## Roadmap
+The owner is learning. Default to **explaining tradeoffs in chat** rather
+than dumping large refactors in one shot. Phase work into reviewable slices.
 
-### Frontend (Next.js App Router)
+---
 
-- [x] File-system routing — `app/` folder, `page.tsx`, `layout.tsx`
-- [x] Client Components vs Server Components
-- [x] `useRouter` for navigation
-- [x] React Context across routes
-- [x] Remove item from cart (context state updates)
-- [x] Order summary page — show order details + "pay after meal" message (no form needed, in-store only)
-- [x] `localStorage` persistence (`useEffect` + hydration)
+## §3. Architectural invariants — DO NOT regress
 
-### Backend (Node.js + Next.js)
+These rules are load-bearing. If you find yourself wanting to break one,
+stop and surface the conflict to the user before doing it.
 
-- [x] What is Node.js and how Next.js runs on top of it
-- [x] What is an HTTP request/response cycle
-- [x] Next.js Route Handlers (`app/api/*/route.ts`) — the Node.js server inside Next.js
-- [x] Reading request body, returning JSON responses
-- [ ] Connecting to a database (e.g. SQLite or Postgres)
-- [ ] Server Actions — running server code directly from a form submit
-- [ ] Environment variables (`.env.local`) — keeping secrets off the client
+1. **Money is recomputed server-side.** The customer cart payload sends
+   `menuItemId` (UUID) + `choiceIds` (UUIDs) + `quantity`. The server looks
+   up the canonical price from `menu_items.price` and `menu_option_choices.
+   price_delta` and computes the line total + order total itself. Never
+   trust a `total` or `unit_price` field from the client. See
+   `src/lib/orders.ts#placeDineInOrderInTx`.
 
-## Project
+2. **Public ids are UUIDs, internal ids are BIGINT.** Anything that flows
+   through a URL, JSON response, or QR code is `public_id UUID`. The
+   `BIGSERIAL` `id` column never leaves the DB layer. This blocks
+   enumeration attacks.
 
-Food order system with two sides:
+3. **Option-group constraints are enforced for every group on the menu
+   item, not only groups the client sent picks for.** Required groups must
+   reject zero-pick submissions. The bug we fixed in Slice A was: iterating
+   `byGroup` of submitted picks misses required groups the client omitted.
+   `src/lib/orders.ts` now loads all groups for the items in the order and
+   checks `min_choices`/`max_choices`/`selection_kind` on every one.
 
-**Customer side (current focus)**
+4. **Migrations are immutable + checksummed.** `scripts/migrate.ts`
+   refuses to apply a file whose content changed after it was first
+   applied. To change schema, add a new migration file. Never edit an
+   already-applied one.
 
-- Menu browsing, item customization, cart, checkout, order confirmation
+5. **Order source is multi-tenant from day one.** `orders.source` is an
+   enum with `dine_in / foodpanda / ubereats / lalamove / web`, plus
+   `external_ref` (UNIQUE per source). Foodpanda webhook handlers go here
+   when they're built — no schema change required. The CHECK constraint
+   forces dine-in to have a `table_id` and external sources to have an
+   `external_ref`.
 
-**Store side (future)**
+6. **Audit log is append-only.** Every state change a customer or staff
+   makes that matters legally/operationally writes to `audit_log` at the
+   boundary. Login success/fail/lockout is already wired. Order status
+   changes (when added in P2) MUST also log there.
 
-- Receive and print incoming orders
-- Daily sales accounting/reporting
-- Integration with delivery platforms (e.g. Foodpanda)
+---
+
+## §4. Next.js 16 gotchas (your training data is wrong about these)
+
+- `middleware.ts` was **renamed to `proxy.ts`** in Next 16. The exported
+  function is `proxy()` (not `middleware()`). Default runtime is **Node.js**,
+  not Edge. Setting a `runtime` config in proxy.ts throws.
+- `params` in dynamic routes is a **Promise** — always `await params`.
+- `cookies()` and `headers()` from `next/headers` are **async** — always
+  `await`.
+- `useSearchParams()` in client components must be wrapped in `<Suspense>`
+  during static generation, or `next build` fails.
+- Read `node_modules/next/dist/docs/` for any feature you're unsure about.
+  AGENTS.md exists specifically to remind you of this.
+
+---
+
+## §5. Security model — currently wired up
+
+Future changes must not silently weaken these. If a change requires
+loosening one, raise it explicitly with the user.
+
+- **CSP** (proxy.ts) — strict default-src 'self', script-src nonce +
+  strict-dynamic, frame-ancestors 'none'. Per-request nonce is generated
+  in proxy.ts and passed via `x-csp-nonce` request header. Style-src still
+  allows `'unsafe-inline'` for Tailwind v4 — TODO to audit and remove.
+- **HSTS** in production only.
+- **X-Frame-Options DENY**, X-Content-Type-Options nosniff, COOP/CORP
+  same-origin, Permissions-Policy locks down camera/mic/geo.
+- **Origin allow-list** for state-changing `/api/*`. Cross-origin POST
+  rejected with 403.
+- **Rate limit** (in-memory token bucket, single-process):
+  - `/api/staff/auth/login`: capacity 5, refill 0.2/s (1 attempt / 5s)
+  - `/api/orders`: capacity 5, refill 0.5/s
+  - other `/api/*`: capacity 30, refill 5/s
+  Replace with Redis (Upstash etc.) before scaling horizontally.
+- **Auth**: argon2id (19 MiB / t=2 / p=1), DB-backed sessions
+  (`staff_sessions`), 32-byte base64url opaque tokens, 8-hour absolute TTL.
+- **CSRF**: double-submit. `staff_session` is httpOnly + sameSite=Lax;
+  `staff_csrf` is non-httpOnly + sameSite=Strict. Client echoes csrf
+  cookie as `X-CSRF-Token` header on state-changing `/api/staff/*`. Login
+  endpoint is exempt (no session yet, but it has the strictest IP rate
+  limit).
+- **Account lockout**: 5 wrong passwords → 15-minute lock on
+  `staff.locked_until`.
+- **Timing attack mitigation on login**: if email is unknown, run
+  `dummyVerify` against a cached argon2 hash so response time matches the
+  wrong-password branch.
+
+---
+
+## §6. Phase status
+
+### P0 — Foundation + safety baseline ✅ DONE
+Docker Postgres + Adminer, versioned + checksummed migrations, hardened
+schema (`restaurants / tables / menu_categories / menu_items /
+menu_option_groups / menu_option_choices / orders / order_items /
+audit_log`), Zod input validation, server-side total recompute, CSP/HSTS/
+COOP/CORP, IP rate limit, Origin check.
+
+### P1 — Auth + staff login ✅ DONE
+Migration `0003_staff_and_sessions.sql` (`staff` + `staff_sessions`),
+argon2id, sessions, CSRF, login/logout/me APIs, `/staff/login` form,
+`/staff` landing page (server component, `requireStaff()` guard),
+account lockout, audit log of login events. Demo credentials below.
+
+### P2 — Staff order dashboard ⏳ NOT STARTED (next slice)
+Concretely:
+- `/staff/orders` list page. Start with polling every 3–5s; upgrade to SSE
+  via Postgres `LISTEN`/`NOTIFY` once the polling cost matters. Don't reach
+  for WebSockets unless we actually need bi-directional.
+- `/staff/orders/[publicId]` detail (items, snapshots, source, table).
+- `PATCH /api/staff/orders/[publicId]` for status transitions. Use a real
+  state machine: `pending → confirmed → preparing → ready → served →
+  completed`, plus `cancelled` from `pending|confirmed`. Reject any
+  transition not in the table.
+- Role-based authorization on transitions. Suggested mapping:
+  - `kitchen`: `confirmed → preparing → ready`
+  - `cashier`/`manager`/`owner`: any forward transition
+  - `cancelled`: `manager`/`owner` only
+- Mock printer: `PrintQueue` interface + `ConsolePrinter` implementation.
+  When an order moves to `confirmed`, enqueue a print job. Replace the
+  adapter when the user picks real hardware (Epson TM ESC/POS over LAN,
+  SUNMI cloud, etc.). Don't bake hardware specifics into the call site.
+- Every state change writes `audit_log` with `actor_kind='staff'` and the
+  staff's public_id, plus `from_status` / `to_status` in the payload.
+
+### P3 — Foodpanda webhook ⏳ BLOCKED on partner credentials
+Schema is ready (`orders.source = 'foodpanda'`, unique `external_ref`).
+Don't write this until the user has Foodpanda partner API docs + sandbox
+keys in hand. Do not scrape; do not use unofficial endpoints.
+
+### P4 — Customer-side polish ⏳ NOT STARTED
+- HMAC-signed table tokens with TTL (currently the table public UUID is
+  the only credential — anyone with the URL can submit). Use the
+  `TABLE_TOKEN_SECRET` env var that's already wired in `src/lib/env.ts`.
+- Order status page so customers can check their order without polling
+  the staff.
+- Optimistic add-to-cart UX, error toasts, loading skeletons.
+
+### P5 — Real-time + dashboard ⏳ NOT STARTED
+- Postgres `LISTEN`/`NOTIFY` → SSE relay for live order list + KDS view.
+- Sales dashboard: revenue by hour, top items, average prep time.
+- Staff management UI (CRUD on `staff` table) + password reset flow.
+- 2FA (TOTP) for owner/manager roles before going live.
+
+### P6 — Production deployment + ops ⏳ NOT STARTED
+- Vercel deploy or self-hosted Docker (Next standalone build).
+- Migrate rate-limit + audit-log tail to Redis / Upstash.
+- Secrets management: replace `.env.local` placeholders, set
+  `TABLE_TOKEN_SECRET` to `openssl rand -base64 48`. The
+  `assertProductionSecrets()` guard in `src/lib/env.ts` will refuse to
+  serve if the dev placeholder leaks into prod.
+- Sentry (or equivalent) for errors + performance.
+- Postgres backup strategy (pgBackRest or managed snapshots).
+- Pen test before flipping the customer-facing DNS.
+
+---
+
+## §7. Known gaps to remember
+
+These are intentional and tracked — don't quietly paper over them in a
+later PR without surfacing.
+
+- **CSP allows `'unsafe-inline'` for styles** because Tailwind v4 emits
+  inline styles. Remove after auditing.
+- **Rate limiter is per-process.** Multi-instance deploy needs a shared
+  store.
+- **Table public UUIDs are not signed.** Anyone with the URL can submit.
+  P4 fixes this.
+- **No staff CRUD UI / no password reset.** Adding/removing staff is a
+  DB operation. P5 fixes this.
+- **Session TTL is absolute (8h), no sliding renewal.** Decide in P5
+  whether to add sliding.
+- **`Math.round(n*100)/100` is good enough for TWD** but fails for
+  rounding-sensitive currencies. If multi-currency arrives, switch to
+  integer minor units throughout.
+- **The home page (`/`) shows a placeholder.** Ordering only works via
+  `/table/[uuid]` (which sets `tableId` in the cart context). Don't add
+  a "place order" button to `/` — that path can't satisfy the dine-in
+  CHECK constraint on `orders`.
+
+---
+
+## §8. Demo / dev credentials
+
+These ship in `scripts/seed.ts`. Replace before any non-local environment.
+
+```
+Demo restaurant: 示範餐廳
+Demo staff:      owner@demo.local / DemoStaff!123  (role: owner)
+Tables seeded:   A1, A2, A3, B1  (run `npm run db:seed` to print URLs)
+```
+
+Useful commands:
+
+```
+npm run db:up        # docker compose: postgres + adminer (Adminer at :8080)
+npm run db:migrate   # apply pending migrations
+npm run db:seed      # idempotent: seeds menu + demo staff if missing
+npm run db:reset     # nuke volume, migrate, seed (for local only)
+npm run dev          # Next.js dev server
+```
+
+---
+
+## §9. Working style with the user
+
+- The user is learning. Prefer to **explain in chat first**, only apply
+  files when explicitly told ("apply", "做下去", "繼續", "可以").
+- When applying, work in small reviewable slices and end with a written
+  summary of (a) what changed, (b) what was verified end-to-end, (c)
+  what's intentionally not done yet.
+- Respond in Traditional Chinese when the user writes Chinese; technical
+  identifiers stay in English.
+- §1 grammar correction at the top of every reply where the user wrote
+  English with mistakes — this is non-negotiable per global CLAUDE.md.

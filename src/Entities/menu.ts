@@ -1,80 +1,85 @@
+// Client-side menu types. Shape matches the API response in
+// `src/lib/menu.ts#PublicMenu`. The legacy MenuType / DetailType / ItemOptions
+// names are kept so existing components don't need to be renamed.
+
+export type ChoiceUI = {
+  id: string;
+  label: string;
+  priceDelta: number;
+  isDefault: boolean;
+};
+
 export type ItemOptions = {
-  optionTitle: string;
-  subOptions: Array<string>;
-  required?: boolean;
+  title: string;
+  selectionKind: "single" | "multi";
+  minChoices: number;
+  maxChoices: number;
+  choices: ChoiceUI[];
 };
 
 export type DetailType = {
+  id: string;
   title: string;
+  description: string;
   price: number;
-  options?: ItemOptions[];
+  isAvailable: boolean;
+  options: ItemOptions[];
 };
-export type MenuType = { id: string; title: string; details: DetailType[] };
-export const menu: MenuType[] = [
-  {
-    id: "test1",
-    title: "test1",
-    details: [
-      {
-        title: "a",
-        price: 23,
-        options: [
-          { optionTitle: "ttt", subOptions: ["a", "b", "c"], required: true },
-          { optionTitle: "ddd", subOptions: ["ae", "be", "ce"] },
-        ],
-      },
-      {
-        title: "b",
-        price: 26,
-        options: [{ optionTitle: "ttt", subOptions: ["a", "b", "c"] }],
-      },
-      { title: "c", price: 23 },
-      { title: "d", price: 26 },
-      { title: "e", price: 23 },
-      { title: "f", price: 26 },
-      { title: "g", price: 23 },
-      { title: "h", price: 26 },
-    ],
-  },
-  {
-    id: "test2",
-    title: "test2",
-    details: [
-      { title: "a", price: 23 },
-      { title: "b", price: 26 },
-    ],
-  },
-  {
-    id: "test3",
-    title: "test3",
-    details: [
-      { title: "a", price: 23 },
-      { title: "b", price: 26 },
-    ],
-  },
-  {
-    id: "test4",
-    title: "test4",
-    details: [
-      { title: "a", price: 23 },
-      { title: "b", price: 26 },
-    ],
-  },
-  {
-    id: "test5",
-    title: "test5",
-    details: [
-      { title: "a", price: 23 },
-      { title: "b", price: 26 },
-    ],
-  },
-  {
-    id: "test6",
-    title: "test6",
-    details: [
-      { title: "a", price: 23 },
-      { title: "b", price: 26 },
-    ],
-  },
-];
-export type ExtendTitleType = (typeof menu)[number]["title"];
+
+// `id` is the category slug (used for scroll-spy ids and URLs).
+export type MenuType = {
+  id: string;
+  title: string;
+  details: DetailType[];
+};
+
+export type ExtendTitleType = string;
+
+export type RestaurantUI = {
+  id: string;
+  name: string;
+  currency: string;
+};
+
+export type MenuUI = {
+  restaurant: RestaurantUI;
+  categories: MenuType[];
+};
+
+// Wire-format coming back from /api/menu. Keep in sync with
+// `src/lib/menu.ts`.
+type ApiOptionGroup = {
+  title: string;
+  selectionKind: "single" | "multi";
+  minChoices: number;
+  maxChoices: number;
+  choices: ChoiceUI[];
+};
+type ApiMenuItem = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  isAvailable: boolean;
+  options: ApiOptionGroup[];
+};
+type ApiCategory = { slug: string; title: string; items: ApiMenuItem[] };
+export type ApiMenu = { restaurant: RestaurantUI; categories: ApiCategory[] };
+
+export function adaptApiMenu(api: ApiMenu): MenuUI {
+  return {
+    restaurant: api.restaurant,
+    categories: api.categories.map((c) => ({
+      id: c.slug,
+      title: c.title,
+      details: c.items.map((it) => ({
+        id: it.id,
+        title: it.title,
+        description: it.description,
+        price: it.price,
+        isAvailable: it.isAvailable,
+        options: it.options,
+      })),
+    })),
+  };
+}

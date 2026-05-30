@@ -9,7 +9,7 @@ export function useScrollSpy<T extends MenuType>({
   menu: readonly T[];
 }) {
   const [currentSection, setCurrentSection] = useState<ExtendTitleType>(
-    menu[0].title,
+    menu[0]?.id ?? "",
   );
   const sectionRefs = useRef<Map<string, HTMLElement>>(
     new Map<string, HTMLElement>(),

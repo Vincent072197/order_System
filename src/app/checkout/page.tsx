@@ -1,67 +1,42 @@
 "use client";
-import { CartItem, useCartContext } from "@/src/context/CartContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-export default function Checkout() {
-  const { reset } = useCartContext();
-  // const cart: Array<CartItem> = JSON.parse(
-  //   window.localStorage.getItem("fakedData") || "[]",
-  // );
-  // Next.js render component on server side first, where window does not exist, so need to useState or useEffect to handle this case.
-  const [cart] = useState<Array<CartItem>>(() => {
-    if (typeof window === "undefined") return [];
-    return JSON.parse(localStorage.getItem("fakedData") || "[]") || [];
-  });
+
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutInner />
+    </Suspense>
+  );
+}
+
+function CheckoutInner() {
   const router = useRouter();
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  useEffect(() => {
-    reset();
-  }, []);
+  const params = useSearchParams();
+  const orderId = params.get("orderId");
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-lg bg-white rounded-2xl shadow p-6 space-y-4">
-        <h1 className="text-2xl font-bold text-center">Your Order</h1>
-
-        {cart.map((item) => (
-          <div key={item.uuid} className="flex justify-between border-b pb-3">
-            <div>
-              <p className="font-semibold">{item.title}</p>
-              {item.customize &&
-                Object.entries(item.customize).map(([key, value]) => (
-                  <p key={key} className="text-sm text-gray-500">
-                    {key}: {value}
-                  </p>
-                ))}
-              <p className="text-sm text-gray-400">x{item.quantity}</p>
-            </div>
-            <p className="font-medium">
-              ${(item.price * item.quantity).toFixed(2)}
-            </p>
-          </div>
-        ))}
-
-        <div className="flex justify-between text-lg font-bold pt-2">
-          <span>Total</span>
-          <span>${total.toFixed(2)}</span>
-        </div>
-
+        <h1 className="text-2xl font-bold text-center">訂單已送出</h1>
+        {orderId ? (
+          <p className="text-center text-sm text-gray-500">
+            訂單編號：<span className="font-mono">{orderId}</span>
+          </p>
+        ) : (
+          <p className="text-center text-sm text-gray-500">
+            找不到訂單資料。
+          </p>
+        )}
         <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center text-yellow-800 font-medium">
-          Please pay at the counter after your meal. Thank you!
+          請於用餐後至櫃台結帳，謝謝！
         </div>
-
         <button
           onClick={() => router.push("/")}
           className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200 transition"
         >
-          Back to Menu
-        </button>
-        <button
-          onClick={() => {
-            window.localStorage.removeItem("fakedData");
-          }}
-          className="w-full py-3 bg-gray-100 rounded-xl text-gray-700 hover:bg-gray-200 transition"
-        >
-          pretend this order has done
+          回到首頁
         </button>
       </div>
     </div>
