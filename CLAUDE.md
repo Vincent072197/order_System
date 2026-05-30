@@ -204,13 +204,16 @@ Schema is ready (`orders.source = 'foodpanda'`, unique `external_ref`).
 Don't write this until the user has Foodpanda partner API docs + sandbox
 keys in hand. Do not scrape; do not use unofficial endpoints.
 
-### P4 — Customer-side polish ⏳ NOT STARTED
-- HMAC-signed table tokens with TTL (currently the table public UUID is
-  the only credential — anyone with the URL can submit). Use the
-  `TABLE_TOKEN_SECRET` env var that's already wired in `src/lib/env.ts`.
-- Order status page so customers can check their order without polling
-  the staff.
-- Optimistic add-to-cart UX, error toasts, loading skeletons.
+### P4 — Customer-side polish ⏳ IN PROGRESS
+- ✅ **P4a — Order status page**: `/order/[publicId]` (read-only by UUID) +
+  `GET /api/orders/[publicId]`, polls every 5s. Linked from checkout.
+- ✅ **P4b — HMAC-signed table tokens**: `src/lib/auth/tableToken.ts`
+  (`signTableToken`/`verifyTableToken`, 6h TTL, pg-free so proxy.ts imports
+  it). proxy.ts mints a `table_token` httpOnly cookie when a customer hits
+  `/table/<uuid>` (QR stays static); `POST /api/orders` now rejects (403
+  `TABLE_TOKEN_INVALID`) unless a valid, unexpired token matches the order's
+  tableId. Revoke everything by rotating `TABLE_TOKEN_SECRET`.
+- ⏳ P4c — Optimistic add-to-cart UX, error toasts, loading skeletons.
 
 ### P5 — Real-time + dashboard ⏳ NOT STARTED
 - Postgres `LISTEN`/`NOTIFY` → SSE relay for live order list + KDS view.
@@ -240,8 +243,10 @@ later PR without surfacing.
   inline styles. Remove after auditing.
 - **Rate limiter is per-process.** Multi-instance deploy needs a shared
   store.
-- **Table public UUIDs are not signed.** Anyone with the URL can submit.
-  P4 fixes this.
+- ~~**Table public UUIDs are not signed.**~~ ✅ Fixed in P4b: ordering now
+  requires an HMAC-signed `table_token` cookie (6h TTL) minted on the table
+  page. A leaked URL still lets someone *load* the page (and get a fresh
+  token), so this is defence-in-depth + revocability, not per-customer auth.
 - **No staff CRUD UI / no password reset.** Adding/removing staff is a
   DB operation. P5 fixes this.
 - **Session TTL is absolute (8h), no sliding renewal.** Decide in P5

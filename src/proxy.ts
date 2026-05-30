@@ -2,12 +2,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { take } from "@/src/lib/rateLimit";
 import { extractClientIp } from "@/src/lib/security";
 import { assertProductionSecrets, loadEnv } from "@/src/lib/env";
+import {
+  TABLE_TOKEN_COOKIE,
+  TABLE_TOKEN_TTL_MS,
+  signTableToken,
+} from "@/src/lib/auth/tableToken";
 
 // Cookie / header names duplicated here so proxy.ts has no dependency on
 // modules that pull in `pg`. Keep in sync with src/lib/auth/sessions.ts.
+// (tableToken.ts is pg-free, so it's safe to import directly above.)
 const SESSION_COOKIE_NAME = "staff_session";
 const CSRF_COOKIE_NAME = "staff_csrf";
 const CSRF_HEADER_NAME = "x-csrf-token";
+
+// Matches a customer table landing: /table/<uuid> (no trailing segments).
+const TABLE_PATH_RE =
+  /^\/table\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
 // Next.js 16 renamed `middleware.ts` to `proxy.ts`. Default runtime is Node.js.
 // We use Node features (`crypto.randomUUID`, shared in-memory Map for rate
@@ -148,6 +158,23 @@ export function proxy(request: NextRequest) {
 
   const res = NextResponse.next({ request: { headers: requestHeaders } });
   applySecurityHeaders(res, nonce);
+
+  // P4b: landing on a table page mints/refreshes a signed table-session token.
+  // The order API requires it, so a raw table UUID alone can no longer submit.
+  const tableMatch =
+    request.method === "GET" ? TABLE_PATH_RE.exec(pathname) : null;
+  if (tableMatch) {
+    res.cookies.set({
+      name: TABLE_TOKEN_COOKIE,
+      value: signTableToken(tableMatch[1]),
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge: Math.floor(TABLE_TOKEN_TTL_MS / 1000),
+    });
+  }
+
   return res;
 }
 
