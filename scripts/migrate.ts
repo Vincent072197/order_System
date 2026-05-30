@@ -33,12 +33,15 @@ async function run() {
     return;
   }
 
+  // Managed Postgres (Supabase/Neon) requires TLS; local Docker doesn't run it.
+  const isLocalDb = env.DB_HOST === "localhost" || env.DB_HOST === "127.0.0.1";
   const pool = new Pool({
     host: env.DB_HOST,
     port: env.DB_PORT,
     user: env.DB_USER,
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
+    ssl: isLocalDb ? undefined : { rejectUnauthorized: false },
   });
   const client = await pool.connect();
   try {
