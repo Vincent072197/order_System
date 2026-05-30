@@ -220,11 +220,17 @@ keys in hand. Do not scrape; do not use unofficial endpoints.
   menu loads; metadata title fixed ("線上點餐"). Add-to-cart was already
   instant (cart is local state + localStorage).
 
-### P5 — Real-time + dashboard ⏳ NOT STARTED
-- Postgres `LISTEN`/`NOTIFY` → SSE relay for live order list + KDS view.
-- Sales dashboard: revenue by hour, top items, average prep time.
-- Staff management UI (CRUD on `staff` table) + password reset flow.
-- 2FA (TOTP) for owner/manager roles before going live.
+### P5 — Real-time + dashboard ⏳ IN PROGRESS
+- ✅ **Sales dashboard**: `/staff/dashboard` (owner/manager) + read model
+  `src/lib/dashboard.ts` (`getDashboardStats`). Today's revenue + order count,
+  revenue-by-hour bars, top items (grouped by `title_snapshot` so deleted
+  items still count), and average prep time derived from `audit_log`
+  (→preparing until →completed). All "today" windows bucketed in Asia/Taipei.
+- ⏳ Real-time: Postgres `LISTEN`/`NOTIFY` → SSE is a poor fit on Vercel
+  serverless; use Supabase Realtime if true push is needed. Today: 4s polling
+  + sound/visual alert (good enough for now).
+- ⏳ Staff management UI (CRUD on `staff` table) + password reset flow.
+- ⏳ 2FA (TOTP) for owner/manager roles before going live.
 
 ### P6 — Production deployment + ops ⏳ NOT STARTED
 - Vercel deploy or self-hosted Docker (Next standalone build).

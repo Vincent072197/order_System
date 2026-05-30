@@ -42,10 +42,15 @@ export default async function StaffHomePage() {
             菜單管理
           </Link>
         )}
+        {canEditMenu(staff.role) && (
+          <Link
+            href="/staff/dashboard"
+            className="inline-block px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300"
+          >
+            營收儀表板
+          </Link>
+        )}
       </nav>
-      <p className="text-xs text-gray-400 mt-6">
-        出單 / 儀表板將於下一階段加入。
-      </p>
     </main>
   );
 }
